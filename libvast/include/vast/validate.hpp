@@ -15,18 +15,21 @@
 namespace vast {
 
 enum class validate {
-  // No data must have an incompatible layout entry.
+  // No data must have an incompatible layout entry
+  // and all required fields exist.
   // Ensures forward compatibility by skipping over unknown fields.
   permissive,
-  // All data must have a compatible layout entry.
+  // All data must have a compatible layout entry and all required
+  // fields exist.
   strict,
-  // The data must correspond exactly to the layout, ie. no fields
-  // can be left out to get a default value. Mostly useful for tests.
+  // All fields are treated as required. Mostly useful for tests.
   exhaustive,
 };
 
 /// Check that all keys in `data` are found in `configuration::layout` with
 /// the correct type.
+/// The `validate` behavior can be adjusted using type attributes:
+///    - required: This field must always be present.
 caf::error validate(const vast::data&, const vast::record_type& layout,
                     enum validate mode);
 

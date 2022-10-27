@@ -49,7 +49,6 @@
           versionOverride = longVersion;
           versionShortOverride = version;
         };
-        vast-ci = pkgs.vast-ci;
         vast-static = pkgs.pkgsStatic.vast.override {
           versionOverride = longVersion;
           versionShortOverride = version;

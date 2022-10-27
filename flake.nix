@@ -21,13 +21,15 @@
         inherit (self.packages."x86_64-linux") vast;
       };
     };
-  } // flake-utils.lib.eachSystem ["x86_64-linux"] (system:
+  } // flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
     let
       overlay = import ./nix/overlay.nix { inherit inputs; };
       pkgs = nixpkgs.legacyPackages."${system}".appendOverlays [ overlay ];
       inherit (builtins.fromJSON (builtins.readFile ./version.json))
-      vast-version-fallback vast-version-rev-count;
-      # Simulate `git describe --abbrev=10 --long --match='v[0-9]*`.
+        vast-version-fallback vast-version-rev-count;
+      longVersionSuffix =
+        "-${builtins.toString (self.revCount - vast-version-rev-count)}-g${builtins.substring 0 10 self.rev}";
+      # Simulate `git describe --abbrev=10 --match='v[0-9]*`.
       # We would like to simulate `--dirty` too, but that is currently not
       # possible (yet?: https://github.com/NixOS/nix/pull/5385).
       version = "${vast-version-fallback}"
@@ -36,21 +38,31 @@
         # correct version. If not we append the difference between both counts
         # and the abbreviated commit hash.
         + pkgs.lib.optionalString (self.revCount > vast-version-rev-count)
-           "-${self.revCount - vast-version-rev-count}-g${builtins.substring 0 10 self.rev}";
+        longVersionSuffix;
+      # Simulate `git describe --abbrev=10 --long --match='v[0-9]*`.
+      longVersion = "${vast-version-fallback}${longVersionSuffix}";
     in
     rec {
       inherit pkgs;
-      packages = flake-utils.lib.flattenTree {
-        vast = pkgs.vast;
+      packages = flake-utils.lib.flattenTree rec {
+        vast = pkgs.vast.override {
+          versionOverride = longVersion;
+          versionShortOverride = version;
+        };
         vast-ci = pkgs.vast-ci;
-        vast-static = pkgs.pkgsStatic.vast;
-        vast-ci-static = pkgs.pkgsStatic.vast-ci;
+        vast-static = pkgs.pkgsStatic.vast.override {
+          versionOverride = longVersion;
+          versionShortOverride = version;
+        };
+        #vast-static-package = packages.vast-static.override {
+        #  buildAsPackage = true;
+        #};
         staticShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            git nixUnstable coreutils nix-prefetch-github
+          buildInputs = with pkgs; [ 
+            git nixUnstable coreutils nix-prefetch-github 
           ];
         };
-        default = pkgs.vast;
+        default = vast;
       };
       apps.vast = flake-utils.lib.mkApp { drv = packages.vast; };
       apps.vast-static = flake-utils.lib.mkApp { drv = packages.vast-static; };

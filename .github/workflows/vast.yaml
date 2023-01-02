@@ -506,18 +506,19 @@ jobs:
           DEB=$(ls "${{ steps.build_static_packages.outputs.store_path }}" | grep "vast.*.deb")
           echo "tar_gz=${TAR_GZ}" >> $GITHUB_OUTPUT
           echo "deb=${DEB}" >> $GITHUB_OUTPUT
+      - name: Extract Tarball
+        run: |
+          tar xf ./result-package/${{ steps.get_artifact_names.outputs.tar_gz }}
       - name: Run Integration Tests
         run: |
-          mkdir -p vast-integration-test
-          tar xf ./result-package/${{ steps.get_artifact_names.outputs.tar_gz }} --directory vast-integration-test
           nix develop .#vast-integration-test-shell --command python vast/integration/integration.py --app \
-            vast-integration-test/opt/vast/bin/vast
+            opt/vast/bin/vast --directory integration-test-state
       - name: Upload Integration Test Logs on Failure
         if: failure()
         uses: actions/upload-artifact@v3
         with:
           name: "vast-integration-test-nix-static-vast"
-          path: "vast-integration-test"
+          path: integration-test-state
           if-no-files-found: error
       - name: Upload Tarball to Github
         uses: actions/upload-artifact@v3

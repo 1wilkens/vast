@@ -163,6 +163,12 @@ in
     # https://github.com/NixOS/nixpkgs/issues/130963
     NIX_LDFLAGS = lib.optionalString stdenv.isDarwin "-lc++abi";
   });
+  vast-cli-test-deps = let
+    bats = prev.bats.withLibraries (p: [
+      p.bats-support
+      p.bats-assert
+    ]);
+  in [ bats ];
   vast-integration-test-deps = let
     py3 = (prev.python3.withPackages(ps: with ps; [
       coloredlogs

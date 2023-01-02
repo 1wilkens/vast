@@ -19,9 +19,8 @@
 , jemalloc
 , libunwind
 , xxHash
-, python3
-, jq
-, tcpdump
+, vast-cli-test-deps
+, vast-integration-test-deps
 , dpkg
 , restinio
 , versionOverride ? null
@@ -34,14 +33,6 @@
 let
   inherit (stdenv.hostPlatform) isStatic;
   isCross = stdenv.buildPlatform != stdenv.hostPlatform;
-
-  py3 = (python3.withPackages(ps: with ps; [
-    coloredlogs
-    jsondiff
-    pyarrow
-    pyyaml
-    schema
-  ]));
 
   src = vast-source;
 
@@ -148,9 +139,10 @@ stdenv.mkDerivation (rec {
   dontStrip = true;
 
   doInstallCheck = false;
-  installCheckInputs = [ py3 jq tcpdump ];
+  installCheckInputs = vast-cli-test-deps ++ vast-integration-test-deps;
   # TODO: Investigate why the disk monitor test fails in the build sandbox.
   installCheckPhase = ''
+    PATH="${placeholder "out"}/bin:$PATH" bats -T -j $NIX_BUILD_CORES ../vast/cli-test
     python ../vast/integration/integration.py \
       --app ${placeholder "out"}/bin/vast \
       --disable "Disk Monitor"

@@ -291,6 +291,14 @@ inline constexpr bool create_partition_index = true;
 /// Whether to spawn central components in separate threads.
 inline constexpr bool detach_components = true;
 
+/// Maximum retries attempts when connecting to a remote vast node.
+inline constexpr std::size_t node_connection_retries = 10u;
+
+/// Time to wait before trying to make another connection attempt to a remote
+/// vast node.
+inline constexpr caf::timespan node_connection_retry_delay
+  = std::chrono::seconds{1u};
+
 } // namespace system
 
 } // namespace vast::defaults

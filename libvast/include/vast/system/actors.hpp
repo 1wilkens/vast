@@ -458,6 +458,13 @@ using terminator_actor = typed_actor_fwd<
   // Shut down the given actors.
   auto(atom::shutdown, std::vector<caf::actor>)->caf::result<atom::done>>::unwrap;
 
+using connector_actor = typed_actor_fwd<
+  // Retrieve the handle to a remote node actor.
+  caf::replies_to<atom::connect>::with<node_actor>,
+  // INTERNAL: tries to connect with a remote node actor within a fixed amount
+  // of tries.
+  caf::reacts_to<atom::internal, atom::start>>::unwrap;
+
 } // namespace vast::system
 
 // -- type announcements -------------------------------------------------------

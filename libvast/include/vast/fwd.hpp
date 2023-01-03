@@ -69,26 +69,6 @@ struct Offset;
 
 } // namespace flatbuffers
 
-// -- caf ----------------------------------------------------------------------
-
-// These are missing from <caf/fwd.hpp>.
-
-namespace caf {
-
-template <class>
-class inbound_stream_slot;
-
-template <class, class...>
-class outbound_stream_slot;
-
-namespace detail {
-
-class stringification_inspector;
-
-} // namespace detail
-
-} // namespace caf
-
 // -- vast ---------------------------------------------------------------------
 
 namespace vast {

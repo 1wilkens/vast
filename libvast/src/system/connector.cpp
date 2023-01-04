@@ -158,6 +158,9 @@ connector(connector_actor::stateful_pointer<connector_state> self,
                                   self->state.host, self->state.port.number(),
                                   std::move(err))));
                   } else {
+                    VAST_INFO("remote node connection failed. Retrying to "
+                              "connect (remaining attempts:{})",
+                              self->state.remaining_connection_attempts);
                     self->delayed_send(self, self->state.connection_retry_delay,
                                        atom::internal_v, atom::start_v);
                   }

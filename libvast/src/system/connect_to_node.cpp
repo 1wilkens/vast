@@ -79,7 +79,7 @@ connect_to_node(caf::scoped_actor& self, const caf::settings& opts) {
                   defaults::system::node_connection_retry_delay,
                   *node_endpoint->port, node_endpoint->host, timeout);
   auto result = caf::expected<node_actor>{caf::error{}};
-  self->request(connector_actor, timeout, atom::connect_v)
+  self->request(connector_actor, caf::infinite, atom::connect_v)
     .receive(
       [&](node_actor& res) {
         result = std::move(res);

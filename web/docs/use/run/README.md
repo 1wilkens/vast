@@ -57,3 +57,11 @@ To select a specific VAST server to connect to,
 `--endpoint=host:port` on the command line, exporting the environment variable
 `VAST_ENDPOINT=host:port`, or setting the configuration option
 `vast.endpoint: host:port` in your `vast.yaml`.
+
+## Client connection failure
+
+In the event of a connection failure, the clients will attempt to connect up to
+100 times with a 3-second delay between each attempt.
+:::info Future improvements
+In the future, the number of attempts and the delay will be customizable.
+:::

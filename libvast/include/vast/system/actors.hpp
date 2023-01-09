@@ -463,7 +463,8 @@ using connector_actor = typed_actor_fwd<
   auto(atom::connect)->caf::result<node_actor>,
   // INTERNAL: tries to connect with a remote node actor within a fixed amount
   // of tries.
-  auto(atom::internal, atom::connect)->caf::result<node_actor>>::unwrap;
+  auto(atom::internal, atom::connect, std::uint64_t)
+    ->caf::result<node_actor>>::unwrap;
 
 } // namespace vast::system
 

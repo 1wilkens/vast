@@ -21,13 +21,6 @@
 
 namespace vast::system {
 
-struct connector_state {
-  /// The amount of connection attempts left before failing.
-  std::size_t remaining_connection_attempts{0u};
-  /// Delay between two connection attempts.
-  caf::timespan connection_retry_delay{0u};
-};
-
 /// @brief Creates an actor that establishes the connection to a remote vast
 /// node
 /// @param max_connection_attempts The maximum number of times the connector will
@@ -38,8 +31,7 @@ struct connector_state {
 /// @param connection_timeout middleman request timeout.
 /// @return actor handle that can be used to connect with a remote vast node.
 connector_actor::behavior_type
-connector(connector_actor::stateful_pointer<connector_state> self,
-          std::size_t max_connection_attempts,
+connector(connector_actor::pointer self, std::uint64_t max_connection_attempts,
           caf::timespan connection_retry_delay, vast::port port,
           std::string host, caf::timespan connection_timeout);
 

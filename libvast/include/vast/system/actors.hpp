@@ -460,10 +460,10 @@ using terminator_actor = typed_actor_fwd<
 
 using connector_actor = typed_actor_fwd<
   // Retrieve the handle to a remote node actor.
-  caf::replies_to<atom::connect>::with<node_actor>,
+  auto(atom::connect)->caf::result<node_actor>,
   // INTERNAL: tries to connect with a remote node actor within a fixed amount
   // of tries.
-  caf::reacts_to<atom::internal, atom::start>>::unwrap;
+  auto(atom::internal, atom::connect)->caf::result<node_actor>>::unwrap;
 
 } // namespace vast::system
 

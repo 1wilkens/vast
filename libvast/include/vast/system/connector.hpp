@@ -32,9 +32,6 @@ struct connector_state {
   std::string host;
   /// Middleman request timeout.
   caf::timespan node_connection_timeout;
-  /// Promise returned by connect handler. Fulfilled on error or on connection
-  /// establishment with a remote node.
-  caf::typed_response_promise<node_actor> promise;
 };
 
 /// @brief Creates an actor that establishes the connection to a remote vast

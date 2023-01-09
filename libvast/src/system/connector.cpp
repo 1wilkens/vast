@@ -122,50 +122,50 @@ connector(connector_actor::stateful_pointer<connector_state> self,
   self->state.port = std::move(port);
   self->state.host = std::move(host);
   self->state.node_connection_timeout = connection_timeout;
-  return {[self,
-           max_connection_attempts](atom::connect) -> caf::result<node_actor> {
-            self->state.remaining_connection_attempts = max_connection_attempts;
-            VAST_INFO("client connects to VAST node at {}", self->state.host);
-            return self->delegate(static_cast<connector_actor>(self),
-                                  atom::internal_v, atom::connect_v);
+  return {
+    [self, max_connection_attempts](atom::connect) -> caf::result<node_actor> {
+      self->state.remaining_connection_attempts = max_connection_attempts;
+      VAST_INFO("client connects to VAST node at {}", self->state.host);
+      return self->delegate(static_cast<connector_actor>(self),
+                            atom::internal_v, atom::connect_v);
+    },
+    [self](atom::internal, atom::connect) -> caf::result<node_actor> {
+      auto middleman = self->system().has_openssl_manager()
+                         ? self->system().openssl_manager().actor_handle()
+                         : self->system().middleman().actor_handle();
+      auto rp = self->make_response_promise<node_actor>();
+      self
+        ->request(middleman, self->state.node_connection_timeout,
+                  caf::connect_atom_v, self->state.host,
+                  self->state.port.number())
+        .then(
+          [self, rp](const caf::node_id& node_id, caf::strong_actor_ptr& node,
+                     const std::set<std::string>&) mutable {
+            VAST_INFO("client connected to VAST node: {} at {}:{}",
+                      to_string(node_id), self->state.host,
+                      to_string(self->state.port));
+            rp.deliver(caf::actor_cast<node_actor>(std::move(node)));
           },
-          [self](atom::internal, atom::connect) -> caf::result<node_actor> {
-            auto middleman = self->system().has_openssl_manager()
-                               ? self->system().openssl_manager().actor_handle()
-                               : self->system().middleman().actor_handle();
-            auto rp = self->make_response_promise<node_actor>();
-            self
-              ->request(middleman, self->state.node_connection_timeout,
-                        caf::connect_atom_v, self->state.host,
-                        self->state.port.number())
-              .then(
-                [self, rp](const caf::node_id& node_id,
-                           caf::strong_actor_ptr& node,
-                           const std::set<std::string>&) mutable {
-                  VAST_DEBUG("client connected to VAST node: {} at {}:{}",
-                             to_string(node_id), self->state.host,
-                             to_string(self->state.port));
-                  rp.deliver(caf::actor_cast<node_actor>(std::move(node)));
-                },
-                [self, rp](caf::error& err) mutable {
-                  if (is_non_recoverable_error(err)
-                      || --self->state.remaining_connection_attempts == 0) {
-                    rp.deliver(caf::make_error(
-                      ec::system_error,
-                      fmt::format("failed to connect to VAST node at {}:{}: {}",
-                                  self->state.host, self->state.port.number(),
-                                  std::move(err))));
-                  } else {
-                    VAST_INFO("remote node connection failed. Retrying to "
-                              "connect (remaining attempts:{})",
-                              self->state.remaining_connection_attempts);
-                    // TODO: wait for weak_run_delayed
-                    rp.delegate(static_cast<connector_actor>(self),
-                                atom::internal_v, atom::connect_v);
-                  }
-                });
-            return rp;
-          }};
+          [self, rp](caf::error& err) mutable {
+            if (is_non_recoverable_error(err)
+                || --self->state.remaining_connection_attempts == 0) {
+              rp.deliver(caf::make_error(
+                ec::system_error,
+                fmt::format("failed to connect to VAST node at {}:{}: {}",
+                            self->state.host, self->state.port.number(),
+                            std::move(err))));
+            } else {
+              VAST_INFO("remote node connection failed. Retrying to "
+                        "connect (remaining attempts:{})",
+                        self->state.remaining_connection_attempts);
+              // TODO: wait for weak_run_delayed
+              rp.delegate(static_cast<connector_actor>(self), atom::internal_v,
+                          atom::connect_v);
+            }
+          });
+      return rp;
+    },
+  };
 }
 
 } // namespace vast::system

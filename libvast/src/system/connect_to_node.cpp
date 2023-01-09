@@ -25,24 +25,40 @@
 namespace vast::system {
 namespace {
 
-void check_version(record& remote_version) {
-  auto local_version = retrieve_versions();
-  if (local_version["VAST"] != remote_version["VAST"])
+void assert_data_completness(const record& remote_version,
+                             const record& local_version) {
+  if (!local_version.contains("VAST"))
+    die("no VAST key found in a local version");
+  if (!remote_version.contains("VAST"))
+    die("no VAST key found in a remote version");
+  if (!local_version.contains("plugins"))
+    die("no plugins key found in a local version");
+  if (!remote_version.contains("plugins"))
+    die("no plugins key found in a remote version");
+}
+
+bool check_version(const record& remote_version) {
+  const auto local_version = retrieve_versions();
+  assert_data_completness(remote_version, local_version);
+  if (local_version.at("VAST") != remote_version.at("VAST")) {
     VAST_WARN("client version {} does not match remote version {}; "
               "this may cause unexpected behavior",
-              local_version["VAST"], remote_version["VAST"]);
-  else
-    VAST_DEBUG("client verified that local VAST version matches remote "
-               "VAST version {}",
-               local_version["VAST"]);
-  if (local_version["plugins"] != remote_version["plugins"])
+              local_version.at("VAST"), remote_version.at("VAST"));
+    return false;
+  }
+  VAST_DEBUG("client verified that local VAST version matches remote "
+             "VAST version {}",
+             local_version.at("VAST"));
+  if (local_version.at("plugins") != remote_version.at("plugins")) {
     VAST_WARN("client plugins {} do not match remote plugins {}; "
               "this may cause unexpected behavior",
-              local_version["plugins"], remote_version["plugins"]);
-  else
-    VAST_DEBUG("client verified that local VAST plugins match remote "
-               "VAST plugins {}",
-               local_version["plugins"]);
+              local_version.at("plugins"), remote_version.at("plugins"));
+    return false;
+  }
+  VAST_DEBUG("client verified that local VAST plugins match remote "
+             "VAST plugins {}",
+             local_version.at("plugins"));
+  return true;
 }
 
 caf::expected<endpoint> get_node_endpoint(const caf::settings& opts) {
@@ -87,9 +103,8 @@ connect_to_node(caf::scoped_actor& self, const caf::settings& opts) {
       [&](caf::error& err) {
         result = std::move(err);
       });
-  if (!result) {
+  if (!result)
     return result;
-  }
   self->request(*result, timeout, atom::get_v, atom::version_v)
     .receive(
       [&](record& remote_version) {

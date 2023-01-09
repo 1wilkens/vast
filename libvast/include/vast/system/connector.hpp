@@ -26,12 +26,6 @@ struct connector_state {
   std::size_t remaining_connection_attempts{0u};
   /// Delay between two connection attempts.
   caf::timespan connection_retry_delay{0u};
-  /// The port of a remote node server.
-  class port port;
-  /// The hostname or IP address of a remote node server.
-  std::string host;
-  /// Middleman request timeout.
-  caf::timespan node_connection_timeout;
 };
 
 /// @brief Creates an actor that establishes the connection to a remote vast

@@ -430,6 +430,7 @@ jobs:
       - name: Run Regression Tests
         working-directory: docker/vast
         run: |
+          set -euxo pipefail
           # Pull the old version to create a database.
           export COMPOSE_FILE="docker-compose.yaml:docker-compose.volume.yaml"
           mkdir vast.db

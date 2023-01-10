@@ -15,6 +15,7 @@
 #include "vast/endpoint.hpp"
 #include "vast/error.hpp"
 #include "vast/logger.hpp"
+#include "vast/system/connect_request.hpp"
 #include "vast/system/connector.hpp"
 #include "vast/system/node_control.hpp"
 #include "vast/system/version_command.hpp"
@@ -90,12 +91,14 @@ connect_to_node(caf::scoped_actor& self, const caf::settings& opts) {
   if (!node_endpoint)
     return std::move(node_endpoint.error());
   auto timeout = node_connection_timeout(opts);
-  auto connector_actor
-    = self->spawn(connector, defaults::system::node_connection_retries,
-                  defaults::system::node_connection_retry_delay,
-                  *node_endpoint->port, node_endpoint->host, timeout);
+  auto connector_actor = self->spawn(connector);
   auto result = caf::expected<node_actor>{caf::error{}};
-  self->request(connector_actor, caf::infinite, atom::connect_v)
+  self
+    ->request(connector_actor, caf::infinite, atom::connect_v,
+              connect_request{defaults::system::node_connection_retries,
+                              defaults::system::node_connection_retry_delay,
+                              timeout, node_endpoint->port->number(),
+                              node_endpoint->host})
     .receive(
       [&](node_actor& res) {
         result = std::move(res);

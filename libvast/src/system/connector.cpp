@@ -3,16 +3,14 @@
 //   | |/ / __ |_\ \  / /          Across
 //   |___/_/ |_/___/ /_/       Space and Time
 //
-// SPDX-FileCopyrightText: (c) 2022 The VAST Contributors
+// SPDX-FileCopyrightText: (c) 2023 The VAST Contributors
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "vast/system/connector.hpp"
 
-#include "vast/concept/printable/to_string.hpp"
-#include "vast/concept/printable/vast/port.hpp"
-#include "vast/defaults.hpp"
 #include "vast/detail/weak_run_delayed.hpp"
 #include "vast/logger.hpp"
+#include "vast/system/connect_request.hpp"
 #include "vast/system/node_control.hpp"
 #include "vast/system/version_command.hpp"
 
@@ -121,53 +119,39 @@ bool should_retry(const caf::error& err,
 } // namespace
 
 connector_actor::behavior_type
-connector(connector_actor::pointer self, std::uint64_t max_connection_attempts,
-          caf::timespan connection_retry_delay, vast::port port,
-          std::string host, caf::timespan connection_timeout) {
-  auto middleman = self->system().has_openssl_manager()
-                     ? self->system().openssl_manager().actor_handle()
-                     : self->system().middleman().actor_handle();
+connector(connector_actor::stateful_pointer<connector_state> self) {
+  self->state.middleman = self->system().has_openssl_manager()
+                            ? self->system().openssl_manager().actor_handle()
+                            : self->system().middleman().actor_handle();
   return {
-    [self, max_connection_attempts,
-     host](atom::connect) -> caf::result<node_actor> {
-      VAST_INFO("client connects to VAST node at {}", host);
-      return self->delegate(static_cast<connector_actor>(self),
-                            atom::internal_v, atom::connect_v,
-                            max_connection_attempts);
-    },
-    [self, port, host, middleman, connection_timeout, connection_retry_delay](
-      atom::internal, atom::connect,
-      std::uint64_t remaining_retries) -> caf::result<node_actor> {
+    [self](atom::connect, connect_request request) -> caf::result<node_actor> {
       auto rp = self->make_response_promise<node_actor>();
       self
-        ->request(middleman, connection_timeout, caf::connect_atom_v, host,
-                  port.number())
+        ->request(self->state.middleman, request.timeout, caf::connect_atom_v,
+                  request.host, request.port)
         .then(
-          [self, rp, port, host](const caf::node_id& node_id,
-                                 caf::strong_actor_ptr& node,
-                                 const std::set<std::string>&) mutable {
+          [self, rp, host = request.host, port = request.port](
+            const caf::node_id& node_id, caf::strong_actor_ptr& node,
+            const std::set<std::string>&) mutable {
             VAST_INFO("client connected to VAST node: {} at {}:{}",
-                      to_string(node_id), host, to_string(port));
+                      to_string(node_id), host, port);
             rp.deliver(caf::actor_cast<node_actor>(std::move(node)));
           },
-          [self, rp, port, host, connection_retry_delay,
-           remaining_retries](caf::error& err) mutable {
-            if (!should_retry(err, --remaining_retries)) {
+          [self, rp, request](caf::error& err) mutable {
+            if (!should_retry(err, --request.remaining_attempts)) {
               rp.deliver(caf::make_error(
                 ec::system_error,
-                fmt::format("failed to connect to VAST node at {}:{}: {}", host,
-                            port.number(), std::move(err))));
+                fmt::format("failed to connect to VAST node at {}:{}: {}",
+                            request.host, request.port, std::move(err))));
             } else {
               VAST_INFO("remote node connection failed. Retrying to "
                         "connect (remaining attempts:{})",
-                        remaining_retries);
-              detail::weak_run_delayed(self, connection_retry_delay,
-                                       [self, rp, remaining_retries]() mutable {
-                                         rp.delegate(
-                                           static_cast<connector_actor>(self),
-                                           atom::internal_v, atom::connect_v,
-                                           remaining_retries);
-                                       });
+                        request.remaining_attempts);
+              detail::weak_run_delayed(
+                self, request.retry_delay, [self, rp, request]() mutable {
+                  rp.delegate(static_cast<connector_actor>(self),
+                              atom::connect_v, std::move(request));
+                });
             }
           });
       return rp;

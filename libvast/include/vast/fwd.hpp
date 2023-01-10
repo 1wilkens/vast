@@ -314,6 +314,7 @@ struct component_map;
 struct component_map_entry;
 struct component_state;
 struct component_state_map;
+struct connect_request;
 struct data_point;
 struct index_state;
 struct measurement;
@@ -392,6 +393,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(vast_types, first_vast_type_id)
   VAST_ADD_TYPE_ID((vast::detail::stable_map<std::string, vast::data>))
   VAST_ADD_TYPE_ID((vast::detail::stable_map<vast::data, vast::data>))
 
+  VAST_ADD_TYPE_ID((vast::system::connect_request))
   VAST_ADD_TYPE_ID((vast::system::metrics_metadata))
   VAST_ADD_TYPE_ID((vast::system::performance_report))
   VAST_ADD_TYPE_ID((vast::system::query_cursor))

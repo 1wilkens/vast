@@ -398,7 +398,7 @@ jobs:
 
   regression-tests:
     needs:
-      - docker
+      - docker-vast
       - configure
     strategy:
       fail-fast: false
@@ -1199,6 +1199,7 @@ jobs:
 
   pass-branch-protections:
     needs:
+      - configure
       - changelog
       - vast-io
       - docker-vast

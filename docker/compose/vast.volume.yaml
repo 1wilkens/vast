@@ -2,8 +2,8 @@ version: "3"
 services:
   vast:
     volumes:
-      - vast:/var/lib/vast/
-      - vast:/var/log/vast/
+      - ${VAST_VOLUME:-vast}:/var/lib/vast/
+      - ${VAST_VOLUME:-vast}:/var/log/vast/
 
 volumes:
   vast:

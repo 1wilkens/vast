@@ -56,6 +56,7 @@ jobs:
     name: Configure
     runs-on: ubuntu-20.04
     outputs:
+      version-matrix: ${{ steps.configure.outputs.version-matrix }}
       build-version: ${{ steps.configure.outputs.build-version }}
       build-version-short: ${{ steps.configure.outputs.build-version-short }}
       before-sha: ${{ steps.configure.outputs.before-sha }}
@@ -96,6 +97,9 @@ jobs:
       - name: Configure
         id: configure
         run: |
+          # Create a matrix for all release versions of VAST.
+          version_matrix="$(git tag --list 'v[0-9]*' | grep -v '\-rc[0-9]\+$' | jq -R | jq -sc 'map({version: .})')"
+          echo "version-matrix=${version_matrix}" >> $GITHUB_OUTPUT
           # Set a bunch of version numbers depending on how we triggered the PR
           # so they're consistent between jobs.
           build_version="$(git describe --abbrev=10 --long --dirty --match='v[0-9]*')"
@@ -391,6 +395,64 @@ jobs:
               done
             done
           done
+
+  regression-tests:
+    needs:
+      - docker
+      - configure
+    strategy:
+      matrix:
+        regression-tests: ${{ fromJson(needs.configure.outputs.version-matrix) }}
+    name: Regression Tests (${{ matrix.regression-tests.version }})
+    runs-on: ubuntu-20.04
+    env:
+      DOCKER_BUILDKIT: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install Docker Compose v2 CLI
+        uses: ndeloof/install-compose-action@v0.0.1
+        with:
+          version: latest
+          legacy: false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Regression Tests
+        working-directory: docker/vast
+        run: |
+          # Pull the old version to create a database.
+          export COMPOSE_FILE="docker-compose.yaml:docker-compose.volume.yaml"
+          mkdir vast.db
+          export VAST_VOLUME="./vast.db"
+          export VAST_CONTAINER_REF="${{ matrix.regression-tests.version }}"
+          export VAST_CONTAINER_REGISTRY=docker.io
+          docker compose up --detach
+          sleep 5
+          docker compose run --no-TTY vast import --blocking suricata \
+            < ../../vast/integration/data/suricata/eve.json
+          docker compose run --interactive=false vast export json \
+            '#type == "suricata.alert"' > old.json
+          docker compose down --volumes
+          sleep 5
+          # Pull the new version to double-check the output.
+          export VAST_CONTAINER_REF="${{ needs.configure.outputs.vast-container-ref }}"
+          export VAST_CONTAINER_REGISTRY=ghcr.io
+          docker compose up --detach
+          sleep 5
+          docker compose run --interactive=false vast export json \
+            '#type == "suricata.alert"' > new.json
+          docker compose down --volumes
+          # Compare old and new
+          diff old.json new.json
 
   docker-compose:
     needs:
@@ -1133,7 +1195,6 @@ jobs:
 
   pass-branch-protections:
     needs:
-      - configure
       - changelog
       - vast-io
       - docker-vast
@@ -1141,11 +1202,13 @@ jobs:
       # We currently have a transient error on TheHive init script (sc-39576)
       # - docker-compose
       - example-notebooks
-      - vast-nix
-      - vast
-      - vast-plugins
       - python
       - python-package
+      - regression-tests
+      - vast
+      - vast-io
+      - vast-nix
+      - vast-plugins
     if: always()
     runs-on: ubuntu-latest
     name: Pass Branch Protections

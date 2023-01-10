@@ -401,6 +401,7 @@ jobs:
       - docker
       - configure
     strategy:
+      fail-fast: false
       matrix:
         regression-tests: ${{ fromJson(needs.configure.outputs.version-matrix) }}
     name: Regression Tests (${{ matrix.regression-tests.version }})

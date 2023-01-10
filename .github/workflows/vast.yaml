@@ -437,7 +437,8 @@ jobs:
           export VAST_VOLUME="./vast.db"
           export VAST_CONTAINER_REF="${{ matrix.regression-tests.version }}"
           export VAST_CONTAINER_REGISTRY=docker.io
-          docker compose up --detach
+          docker compose pull
+          docker compose up --detach --force-recreate
           sleep 5
           docker compose run --no-TTY vast import --blocking suricata \
             < ../../vast/integration/data/suricata/eve.json
@@ -448,7 +449,8 @@ jobs:
           # Pull the new version to double-check the output.
           export VAST_CONTAINER_REF="${{ needs.configure.outputs.vast-container-ref }}"
           export VAST_CONTAINER_REGISTRY=ghcr.io
-          docker compose up --detach
+          docker compose pull
+          docker compose up --detach --force-recreate
           sleep 5
           docker compose run --interactive=false vast export json \
             '#type == "suricata.alert"' > new.json

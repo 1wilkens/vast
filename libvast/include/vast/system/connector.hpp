@@ -21,8 +21,8 @@
 
 namespace vast::system {
 
-/// @brief Creates an actor that establishes the connection to a remote vast
-/// node
+/// @brief Creates an actor that establishes the connection to a remote VAST
+/// node.
 /// @param max_connection_attempts The maximum number of times the connector will
 /// try to connect with a remote node when the connection can't be established.
 /// @param connection_retry_delay delay between two connection attempts.

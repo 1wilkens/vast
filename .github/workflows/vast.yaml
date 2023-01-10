@@ -414,11 +414,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - name: Install Docker Compose v2 CLI
-        uses: ndeloof/install-compose-action@v0.0.1
-        with:
-          version: latest
-          legacy: false
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to GitHub Container Registry

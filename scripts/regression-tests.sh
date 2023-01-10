@@ -16,9 +16,10 @@ docker compose pull
 docker compose up --detach --force-recreate vast
 sleep 5
 docker compose logs
-docker compose run --no-TTY vast import --blocking suricata \
+docker compose run --rm --no-TTY --entrypoint bash vast -c \
+    "vast import --blocking suricata && vast flush" \
     < ../../vast/integration/data/suricata/eve.json
-docker compose run --interactive=false vast export json \
+docker compose run --rm --interactive=false vast export json \
     '#type == "suricata.alert"' > old.json
 docker compose down
 sleep 5
@@ -28,8 +29,8 @@ export VAST_CONTAINER_REGISTRY=ghcr.io
 docker compose pull
 docker compose up --detach --force-recreate vast
 sleep 5
-docker compose run --interactive=false vast export json \
-'#type == "suricata.alert"' > new.json
-docker compose down
+docker compose run --rm --interactive=false vast export json \
+  '#type == "suricata.alert"' > new.json
+docker compose down -v
 # Compare old and new
 diff old.json new.json

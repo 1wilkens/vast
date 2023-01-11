@@ -9,13 +9,13 @@ set -euxo pipefail
 
 pushd "$(git -C "$(dirname "$(readlink -f "${0}")")" rev-parse --show-toplevel)"
 
-VAST_RUN_FLAGS="--pull=always --rm --name vast-regression -e VAST_CONSOLE_VERBOSITY=verbose -v vast-regression:/var/lib/vast/"
+VAST_RUN_FLAGS="-d --pull=always --rm --name vast-regression -e VAST_CONSOLE_VERBOSITY=verbose -v vast-regression:/var/lib/vast/"
 
 # Pull the old version to create a database.
 docker run \
   $VAST_RUN_FLAGS \
   docker.io/tenzir/vast:$OLD_VERSION \
-  start &
+  start
 
 sleep 3
 
@@ -36,7 +36,7 @@ docker rm -f vast-regression
 docker run \
   $VAST_RUN_FLAGS \
   ghcr.io/tenzir/vast:$NEW_VERSION \
-  start &
+  start
 
 sleep 3
 

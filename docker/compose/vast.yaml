@@ -16,7 +16,6 @@ services:
     ports:
       - ${VAST_WEB_PORT:-42001}:42001
       - ${VAST_PORT:-42000}:42000
-    entrypoint: vast
     command:
       - start
     networks:

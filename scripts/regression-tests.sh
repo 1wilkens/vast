@@ -9,7 +9,7 @@ set -euxo pipefail
 
 pushd "$(git -C "$(dirname "$(readlink -f "${0}")")" rev-parse --show-toplevel)"
 
-VAST_RUN_FLAGS="--pull --rm --name vast-regression -e VAST_CONSOLE_VERBOSITY=verbose -v vast-regression:/var/lib/vast/"
+VAST_RUN_FLAGS="--pull=always --rm --name vast-regression -e VAST_CONSOLE_VERBOSITY=verbose -v vast-regression:/var/lib/vast/"
 
 # Pull the old version to create a database.
 docker run \
